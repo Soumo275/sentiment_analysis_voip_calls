@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Browser → Phone Call</title>
+  <script src="https://sdk.twilio.com/js/client/v1.13/twilio.min.js"></script>
+  <style>
+    body { font-family: sans-serif; max-width: 600px; margin: 40px auto; }
+    input, button { padding: 8px; font-size: 16px; margin: 4px 0; }
+  </style>
+</head>
+<body>
+  <h1>Browser Call via Twilio</h1>
+  <input type="text" id="phone-number" placeholder="+15551234567">
+  <br>
+  <button id="call-btn">Call</button>
+  <button id="hangup-btn" disabled>Hangup</button>
+  <p id="status">Status: Idle</p>
+
+  <script>
+    let device, conn;
+
+    function setStatus(msg) {
+      document.getElementById("status").innerText = "Status: " + msg;
+    }
+
+    async function init() {
+      const res = await fetch("/token");
+      const data = await res.json();
+
+      device = new Twilio.Device(data.token, { codecPreferences: ["opus", "pcmu"] });
+
+      device.on("ready", () => setStatus("Device ready"));
+      device.on("error", err => setStatus("Error: " + err.message));
+      device.on("connect", () => {
+        setStatus("On call");
+        document.getElementById("hangup-btn").disabled = false;
+      });
+      device.on("disconnect", () => {
+        setStatus("Idle");
+        document.getElementById("hangup-btn").disabled = true;
+      });
+
+      document.getElementById("call-btn").onclick = () => {
+        const num = document.getElementById("phone-number").value.trim();
+        if (!num) return alert("Enter a number in E.164 format (+15551234567)");
+        conn = device.connect({ To: num });
+        setStatus("Calling " + num);
+      };
+
+      document.getElementById("hangup-btn").onclick = () => {
+        if (conn) conn.disconnect();
+      };
+    }
+
+    init();
+  </script>
+</body>
+</html>
